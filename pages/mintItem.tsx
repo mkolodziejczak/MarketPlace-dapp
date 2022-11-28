@@ -1,101 +1,110 @@
 import type { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import { useEffect, useState } from "react";
-import useUSElectionContract from "../hooks/useUSElectionContract";
+import useMarketplaceContract from "../hooks/useMarketplaceContract";
+import useApolloClient from "../hooks/useApolloClient";
+import { gql } from '@apollo/client';
+import { USER_COLLECTIONS_QUERY } from "../constants/queries";
+import useNftStorage from "../hooks/useNftStorage";
 
-type USContract = {
+type MarketplaceContract = {
   contractAddress: string;
 };
 
-export enum Leader {
-  UNKNOWN,
-  BIDEN,
-  TRUMP
-}
 
-const MintItem = ({ contractAddress }: USContract) => {
+const MintItem = ({ contractAddress }: MarketplaceContract) => {
   const { account, library } = useWeb3React<Web3Provider>();
-  const usElectionContract = useUSElectionContract(contractAddress);
+  const marketplaceContract = useMarketplaceContract(contractAddress);
   const [currentLeader, setCurrentLeader] = useState<string>('Unknown');
   const [name, setName] = useState<string | undefined>();
-  const [votesBiden, setVotesBiden] = useState<number | undefined>();
-  const [votesTrump, setVotesTrump] = useState<number | undefined>();
-  const [stateSeats, setStateSeats] = useState<number | undefined>();
+  const [description, setDescription] = useState<string | undefined>();
+  const [collection, setCollection] = useState<string | undefined>();
+  const [file, setFile] = useState();
+  const [collections, setCollections] = useState<JSX.Element[]>([]);
 
   useEffect(() => {
-    getCurrentLeader();
-  },[])
+    useApolloClient()
+      .query({
+        query: gql(USER_COLLECTIONS_QUERY),
+        variables: {
+          first: account,
+        },
+      })
+      .then((data) => setCollections(data.data.collections))
+      .catch((err) => {
+        console.log('Error fetching data: ', err)
+      })
+  },[]);
 
-  const getCurrentLeader = async () => {
-    const currentLeader = await usElectionContract.currentLeader();
-    setCurrentLeader(currentLeader == Leader.UNKNOWN ? 'Unknown' : currentLeader == Leader.BIDEN ? 'Biden' : 'Trump')
-  }
-
-  const stateInput = (input) => {
+  const nameInput = (input) => {
     setName(input.target.value)
   }
 
-  const bideVotesInput = (input) => {
-    setVotesBiden(input.target.value)
+  const descriptionInput = (input) => {
+    setDescription(input.target.value)
   }
 
-  const trumpVotesInput = (input) => {
-    setVotesTrump(input.target.value)
+  const collectionInput = (input) => {
+    setCollection(input.target.value)
   }
 
-  const seatsInput = (input) => {
-    setStateSeats(input.target.value)
+  const fileInput = (input) => {
+    setFile(input.target.file[0])
   }
 
   const submitStateResults = async () => {
-    const result:any = [name, votesBiden, votesTrump, stateSeats];
-    const tx = await usElectionContract.submitStateResult(result);
-    await tx.wait();
+    const uri = useNftStorage(file, name, description);
+     
+    //const tx = await usElectionContract.submitStateResult(result);
+    //await tx.wait();
     resetForm();
   }
 
   const resetForm = async () => {
     setName('');
-    setVotesBiden(0);
-    setVotesTrump(0);
-    setStateSeats(0);
+    setDescription('');
+    setCollection('');
+    setFile( undefined );
   }
 
   return (
     <div className="results-form">
     <p>
-      Current Leader is: {currentLeader}
+      Current Leader is: {collections}
     </p>
     <form>
       <label>
-        State:
-        <input onChange={stateInput} value={name} type="text" name="state" />
+        Name:
+        <input onChange={nameInput} value={name} type="text" name="name" />
       </label>
       <label>
-        BIDEN Votes:
-        <input onChange={bideVotesInput} value={votesBiden} type="number" name="biden_votes" />
+        Description:
+        <input onChange={descriptionInput} value={description} type="text" name="description" />
       </label>
       <label>
-        TRUMP Votes:
-        <input onChange={trumpVotesInput} value={votesTrump} type="number" name="trump_votes" />
+        Collection:
+        <select value={collection} onChange={collectionInput}>
+            {collections.map((d) => (
+                <option value="{d.id}"> d.collectionName</option>
+            ))}
+        </select>
       </label>
       <label>
-        Seats:
-        <input onChange={seatsInput} value={stateSeats} type="number" name="seats" />
+        File:
+        <input onChange={fileInput} value={file} type="file" name="file" />
       </label>
       {/* <input type="submit" value="Submit" /> */}
     </form>
     <div className="button-wrapper">
-      <button onClick={submitStateResults}>Submit Results</button>
+    <button onClick={submitStateResults}>Submit Results</button>
+    </div>
+    <div className="error">
+        ERROR
     </div>
     <style jsx>{`
         .results-form {
           display: flex;
           flex-direction: column;
-        }
-
-        .button-wrapper {
-          margin: 20px;
         }
         
       `}</style>

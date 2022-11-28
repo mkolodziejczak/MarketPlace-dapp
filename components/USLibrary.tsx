@@ -1,7 +1,7 @@
 import type { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import { useEffect, useState } from "react";
-import useUSElectionContract from "../hooks/useUSElectionContract";
+import useUSElectionContract from "../hooks/useMarketplaceContract";
 
 type USContract = {
   contractAddress: string;

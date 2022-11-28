@@ -1,17 +1,12 @@
-import { NFTStorage, File } from 'nft.storage'
-import mime from 'mime'
-import fs from 'fs'
-
-import path from 'path'
+import { NFTStorage } from 'nft.storage'
 import { NFT_STORAGE_KEY } from "../constants";
 
-export default async function useNftStorage(imagePath: string, name: string, description: string) {
-  const result = await storeNFT(imagePath, name, description)
+export default async function useNftStorage(image: any, name: string, description: string) {
+  const result = await storeNFT(image, name, description)
   return result;
 }
 
-async function storeNFT(imagePath, name, description) {
-    const image = await fileFromPath(imagePath)
+async function storeNFT(image, name, description) {
 
     const nftstorage = new NFTStorage({ token: NFT_STORAGE_KEY })
 
@@ -22,10 +17,6 @@ async function storeNFT(imagePath, name, description) {
     })
 }
 
-async function fileFromPath(filePath) {
-    const content = await fs.promises.readFile(filePath)
-    const type = mime.getType(filePath)
-    return new File([content], path.basename(filePath), { type })
-}
+
 
 
