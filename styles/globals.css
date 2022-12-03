@@ -21,6 +21,7 @@ a {
 }
 .NavBar {
   border-bottom: 1px groove rgb(221, 221, 221);
+  margin: 0px 20px;
 }
 ul {
   list-style-type: none;

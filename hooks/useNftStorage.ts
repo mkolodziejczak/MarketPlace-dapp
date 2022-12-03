@@ -1,7 +1,7 @@
 import { NFTStorage } from 'nft.storage'
 import { NFT_STORAGE_KEY } from "../constants";
 
-export default async function useNftStorage(image: any, name: string, description: string) {
+export default async function useNftStorage(image: File, name: string, description: string) {
   const result = await storeNFT(image, name, description)
   return result;
 }

@@ -7,6 +7,7 @@ export const TOKENS_QUERY = `
             id
         }
         collection {
+            id
             collectionName
         }
         listing {
@@ -33,6 +34,7 @@ export const USER_TOKENS_QUERY = `
             id
         }
         collection {
+            id
             collectionName
         }
         listing {
@@ -52,13 +54,42 @@ export const USER_TOKENS_QUERY = `
 
 export const USER_COLLECTIONS_QUERY = `
   query ($userAddress: String) {
-    collections(creator: userAddress) {
+    collections(creator: $userAddress) {
         id
         collectionAddress
         collectionName
-        creator
+        creator {
+            id
+        }
     }
   }  
+`;
+
+export const COLLECTION_TOKENS_QUERY = `
+  query($collectionAddress: String) {
+    tokens {
+        id
+        tokenId
+        owner {
+            id
+        }
+        collection (id: $collectionAddress) {
+            id
+            collectionName
+        }
+        listing {
+            price
+        }
+        offers {
+            offerer {
+                id
+            }
+            price
+        }
+        approved
+        uri
+      }
+  }
 `;
 
 export const TOKEN_QUERY = `
@@ -70,6 +101,7 @@ export const TOKEN_QUERY = `
             id
         }
         collection {
+            id
             collectionName
         }
         listing {
