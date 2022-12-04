@@ -36,14 +36,15 @@ function Home() {
 
 
   function searchUser() {
+    console.log(userToSearch);
     useApolloClient()
     .query({
       query: gql(USER_TOKENS_QUERY),
       variables: {
-        userAddress: userToSearch,
+        userAddress: userToSearch.toLowerCase(),
       },
     })
-    .then((data) => route( data.data.tokens, '/searchResults' ))
+    .then((data) => route( data.data.user.tokens, '/searchByUser' ))
     .catch((err) => {
       console.log('Error fetching data: ', err)
     })
@@ -57,7 +58,7 @@ function Home() {
         collectionAddress: collectionToSearch,
       },
     })
-    .then((data) => route( data.data.tokens, '/searchResults' ))
+    .then((data) => route( data.data.collection.tokens, '/searchByCollection' ))
     .catch((err) => {
       console.log('Error fetching data: ', err)
     })
@@ -67,9 +68,9 @@ function Home() {
   function route (param, url : string) {
     console.log( param )
     Router.push({
-      pathname: url,
-      query: { tokens: param }
-    })
+       pathname: url,
+       query: {tokens: JSON.stringify(param)}
+     })
   }
 
   return (
