@@ -38,7 +38,7 @@ const UserActions = () => {
       getBalance();
     }
     
-  },[]);
+  },[account]);
 
   const checkIfApplicableToParse = ( amount: string) => {
     for (const unit of names) {

@@ -17,18 +17,21 @@ function Profile() {
 
   useEffect(() => {
     setLoading(true);
-    useApolloClient()
-      .query({
-        query: gql(USER_TOKENS_QUERY),
-        variables: {
-          userAddress: account,
-        },
-      })
-      .then((data) => {setResult(data.data.tokens); setLoading(false);})
-      .catch((err) => {
-        console.log('Error fetching data: ', err)
-      })
-  },[]);
+    if ( account ) {
+      console.log(account);
+      useApolloClient()
+        .query({
+          query: gql(USER_TOKENS_QUERY),
+          variables: {
+            userAddress: account.toLowerCase(),
+          },
+        })
+        .then((data) => {setResult(data.data.user.tokens); console.log(data.data.user.tokens); setLoading(false);})
+        .catch((err) => {
+          console.log('Error fetching data: ', err)
+        })
+    }
+  },[account]);
 
   return (
     <div>

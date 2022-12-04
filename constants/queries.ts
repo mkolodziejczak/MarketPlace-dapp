@@ -28,29 +28,34 @@ export const TOKENS_QUERY = `
 
 export const USER_TOKENS_QUERY = `
   query($userAddress: String) {
-    tokens {
-        id
-        tokenId
-        owner(id: $userAddress) {
+    user(id: $userAddress) 
+    {
+        tokens {
             id
-        }
-        collection {
-            id
-            collectionName
-        }
-        listing {
-            price
-        }
-        offers {
-            offerer {
+            tokenId
+            collection {
+                id
+                collectionName
+            }
+            owner {
                 id
             }
-            price
-            active
+            listing{
+                id
+                price
+            }
+            offers {
+                id
+                offerer {
+                    id
+                }
+                price
+                active
+          }
+          uri
+          approved
         }
-        approved
-        uri
-      }
+    }
   }
 `;
 
@@ -69,29 +74,34 @@ export const USER_COLLECTIONS_QUERY = `
 
 export const COLLECTION_TOKENS_QUERY = `
   query($collectionAddress: String) {
-    tokens {
-        id
-        tokenId
-        owner {
-            id
-        }
-        collection (id: $collectionAddress) {
+    collection(id: $collectionAddress) 
+    {
+          tokens{
+          id
+          tokenId
+          collection {
             id
             collectionName
-        }
-        listing {
+          }
+          owner{
+            id
+          }
+          listing{
+            id
             price
-        }
-        offers {
+          }
+          offers {
+            id
             offerer {
-                id
+              id
             }
             price
             active
+          }
+          uri
+          approved
         }
-        approved
-        uri
-      }
+    }
   }
 `;
 
