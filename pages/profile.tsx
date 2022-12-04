@@ -5,16 +5,18 @@ import TokenGrid from "../components/TokenGrid";
 import useApolloClient from "../hooks/useApolloClient";
 import { gql } from '@apollo/client';
 import { USER_TOKENS_QUERY } from "../constants/queries";
+import UserActions from "../components/UserActions";
+import { CircleSpinnerOverlay, FerrisWheelSpinner } from 'react-spinner-overlay'
 
 function Profile() {
   const { account, library } = useWeb3React();
   
   const isConnected = typeof account === "string" && !!library;
   const [result, setResult] = useState<JSX.Element[]>([]);
-
+  const [loading, setLoading] = useState<Boolean>();
 
   useEffect(() => {
-    if( isConnected ) {
+    setLoading(true);
     useApolloClient()
       .query({
         query: gql(USER_TOKENS_QUERY),
@@ -22,11 +24,10 @@ function Profile() {
           userAddress: account,
         },
       })
-      .then((data) => setResult( data.data.tokens ))
+      .then((data) => {setResult(data.data.tokens); setLoading(false);})
       .catch((err) => {
         console.log('Error fetching data: ', err)
       })
-    }
   },[]);
 
   return (
@@ -35,10 +36,17 @@ function Profile() {
         <title>Marketplace</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
+      {loading && (
+          <div>
+              <CircleSpinnerOverlay
+              　　loading={loading} 
+              overlayColor="rgba(0,153,255,0.2)"
+              />
+          </div>
+        )}
       <main>
-      
-      {isConnected ? (
+      <UserActions/>
+      {isConnected && !loading ? (
         <section>
           Profile
           <div>

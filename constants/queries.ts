@@ -18,6 +18,7 @@ export const TOKENS_QUERY = `
                 id
             }
             price
+            active
         }
         approved
         uri
@@ -45,6 +46,7 @@ export const USER_TOKENS_QUERY = `
                 id
             }
             price
+            active
         }
         approved
         uri
@@ -85,6 +87,7 @@ export const COLLECTION_TOKENS_QUERY = `
                 id
             }
             price
+            active
         }
         approved
         uri
@@ -112,6 +115,7 @@ export const TOKEN_QUERY = `
                 id
             }
             price
+            active
         }
         approved
         uri

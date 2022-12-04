@@ -64,7 +64,7 @@ function Home() {
   }
 
 
-  function route (param : string, url : string) {
+  function route (param, url : string) {
     console.log( param )
     Router.push({
       pathname: url,
@@ -80,19 +80,18 @@ function Home() {
       </Head>
 
       <main>
-      
       {isConnected ? (
         <div>
-          <div>
+          <div className="searchBar">
             Search tokens by user: <input onChange={userToSearchInput} value={userToSearch} type="text" name="userToSearch" />
             <div className="button-wrapper">
-              <button onClick={searchUser}>Submit Results</button>
+              <button onClick={searchUser}>Search</button>
             </div>
             </div>
-            <div>
+            <div  className="searchBar">
             Search tokens by collection: <input onChange={collectionToSearchInput} value={collectionToSearch} type="text" name="CollectionToSearch" />
             <div className="button-wrapper">
-              <button onClick={searchCollection}>Submit Results</button>
+              <button onClick={searchCollection}>Search</button>
             </div>
           </div>
           <section>
@@ -123,6 +122,9 @@ function Home() {
 
         main {
           text-align: center;
+        }
+        .searchBar {
+          margin: 1% 35%;
         }
       `}</style>
     </div>

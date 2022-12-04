@@ -9,7 +9,18 @@ import useMarketplaceContract from "../hooks/useMarketplaceContract";
 import { MARKETPLACE_ADDRESS } from "../constants/index";
 import useSignatureProvider from "../hooks/useSignatureProvider";
 import type { Web3Provider } from "@ethersproject/providers";
-import { ethers } from "ethers";
+import { BigNumberish, ethers } from "ethers";
+import { CircleSpinnerOverlay, FerrisWheelSpinner } from 'react-spinner-overlay'
+
+const names = [
+  "kwei",
+  "mwei",
+  "gwei",
+  "szabo",
+  "finney",
+  "ether",
+  "wei",
+];
 
 type TokenData = {
     data: ContractToken[];
@@ -24,6 +35,7 @@ type Metadata = {
 type Offer = {
   price: number;
   offerer: string;
+  active: boolean;
 }
 
 type ContractToken = {
@@ -60,7 +72,21 @@ const TokenGrid = ({ data }: TokenData) => {
   const { account, library } = useWeb3React<Web3Provider>();
   const marketplaceContract = useMarketplaceContract(MARKETPLACE_ADDRESS);
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [allowSale, setAllowSale] = useState<JSX.Element[]>([]);
+  const [loading, setLoading] = useState<boolean>(false)
+
+  const [errorData, setErrorData] = useState(new Map());
+  const updateErrorData = (k,v) => {
+    setErrorData(errorData.set(k,v));
+  }
+  const [saleData, setSaleData] = useState(new Map());
+  const updateSaleData = (k,v) => {
+    setSaleData(saleData.set(k,v));
+  }
+
+  const [offerData, setOfferData] = useState(new Map());
+  const updateOfferData = (k,v) => {
+    setOfferData(offerData.set(k,v));
+  }
 
   async function getMetadataFromUrl( url: string) {
     const metadata = url.replace('ipfs://', 'https://ipfs.io/ipfs/');
@@ -68,10 +94,8 @@ const TokenGrid = ({ data }: TokenData) => {
     try {
       let response = await fetch(metadata);
       const responseJson : Metadata = await response.json();
-      console.log(responseJson);
       return responseJson;
      } catch(error) {
-      console.error(error);
     }
   }
   
@@ -86,41 +110,37 @@ const TokenGrid = ({ data }: TokenData) => {
     const processTokens = async(data) => {
       console.log(data);
       let tokensArray = [];
-      let sales = [];
       for (const token of data) {
         if( token.uri != "" ) {
           let newToken: Token = await processToken(token);
           tokensArray.push(newToken);
-          sales.push({id: token.id, allowed: false})
         }
       }
       setTokens(tokensArray);
-      setAllowSale(sales);
     };
-
+    console.log(data);
     processTokens(data);
   },[]);
 
   function checkIfOfferer( offer: Offer ) : boolean {
-    if (offer.offerer.localeCompare(account)) {
+    if (offer.offerer.id === account.toLowerCase()) {
       return true;
     }
     return false;
   }
 
-
-  function checkIfSale( tokenId ) {
-    var result = allowSale.filter(obj => {
-      return obj.id === tokenId;
+  function checkIfOfferExists( offers: Offer[] ) : boolean {
+    let matched = false;
+    offers.map(( offer, index) => {
+      if (checkIfOfferer(offer) && offer.active) {
+        matched = true;
+      }
     });
-    if (result && result.allowed) {
-      return true;
-    }
-    return false;
+    return matched;
   }
-
 
   const approve = async (tokenId, collectionAddress, collectionName) => {
+    setLoading(true);
     const signer = library.getSigner(account);
     const nonce = await marketplaceContract.getTokenNonce(collectionAddress, tokenId);
 
@@ -131,67 +151,128 @@ const TokenGrid = ({ data }: TokenData) => {
       signature.v, signature.r, signature.s);
 
     await tx.wait();
+    setLoading(false);
   }
 
-  const sell = async (tokenId, collectionAddress, price) => {
+  const checkIfApplicableToParse = ( amount: string) => {
+    for (const unit of names) {
+      if (amount.indexOf(unit) > -1) {
+        return unit;
+      }
+    }
+    return null;
+  }
 
-    const tx = await marketplaceContract.listForSale(collectionAddress, tokenId, price, {
-      value: ethers.utils.parseUnits('1', 'gwei')
+  const parseValueToEth = ( amount: string ) => {
+
+    const unit = checkIfApplicableToParse(amount);
+
+    if (unit) {
+      const newValue = amount.replace(unit, "").replace(/\s/g, "");
+      return ethers.utils.parseUnits(newValue, unit);
+    } else {
+      return ethers.BigNumber.from(amount);
+    }
+  }
+
+  const sell = async (id, tokenId, collectionAddress) => {
+    setLoading(true);
+    const amount = saleData.get("salePrice-"+id);
+
+    if( amount == "" || amount === undefined) {
+      updateErrorData(id, "price cannot be null or 0");
+      return
+    }
+
+    const parsedValue = parseValueToEth(amount);
+
+    const tx = await marketplaceContract.listForSale(collectionAddress, tokenId, parsedValue, {
+      value: ethers.utils.parseUnits("1", "gwei")
     });
     await tx.wait();
+    setLoading(false);
+    window.location.reload();
   }
 
   const withdrawForSale = async (tokenId, collectionAddress) => {
+    setLoading(true);
     const tx = await marketplaceContract.withdrawFromSale(collectionAddress, tokenId);
     await tx.wait();
+    setLoading(false);
+    window.location.reload();
   }
 
   const buyAnItem = async (tokenId, collectionAddress, price) => {
+    setLoading(true);
     const tx = await marketplaceContract.buyAnItem(collectionAddress, tokenId, {
       value: price
     });
     await tx.wait();
+    setLoading(false);
+    window.location.reload();
   }
 
-  const makeAnOffer = async (tokenId, collectionAddress, price) => {
+  const makeAnOffer = async (id, tokenId, collectionAddress) => {
+    setLoading(true);
+    const amount = offerData.get('offerPrice-'+id);
+    if( amount == "" || amount === undefined) {
+      updateErrorData(id, "price cannot be null or 0");
+      return
+    }
+    const parsedValue = parseValueToEth(amount);
     const tx = await marketplaceContract.makeAnOffer(collectionAddress, tokenId, {
-      value: price
+      value: parsedValue
     });
     await tx.wait();
+    setLoading(false);
+    window.location.reload();
   }
 
   const withdrawAnOffer = async (tokenId, collectionAddress) => {
+    setLoading(true);
     const tx = await marketplaceContract.withdrawAnOffer(collectionAddress, tokenId);
     await tx.wait();
+    setLoading(false);
+    window.location.reload()
   }
 
   const rejectAnOffer = async (tokenId, collectionAddress, offerersAddress) => {
-    const tx = await marketplaceContract.rejectAnOffer(collectionAddress, tokenId, offerersAddress);
+    setLoading(true);
+    const tx = await marketplaceContract.rejectAnOffer(collectionAddress, tokenId, offerersAddress.id);
     await tx.wait();
+    setLoading(false);
+    window.location.reload()
   }
 
   const approveAnOffer = async (tokenId, collectionAddress, offerersAddress) => {
-    const tx = await marketplaceContract.rejectAnOffer(collectionAddress, tokenId, offerersAddress);
-    await tx.wait();
-  }
-
-
-  const allowForSale = (tokenId) => {
-    console.log(allowSale);
-    var result = allowSale.findIndex(obj => {
-      return obj.id === tokenId;
+    setLoading(true);
+    const tx = await marketplaceContract.approveAnOffer(collectionAddress, tokenId, offerersAddress.id, {
+      value: ethers.utils.parseUnits("1", "gwei")
     });
-    let newArr = [...allowSale];
-    newArr[result].allow =true;
-    setAllowSale(newArr);
-
+    await tx.wait();
+    setLoading(false);
+    window.location.reload()
   }
 
+  const priceInput = (input) => {
+    updateSaleData(input.target.name, input.target.value);
+  }
 
+  const offerInput = (input) => {
+    updateOfferData(input.target.name, input.target.value);
+  }
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
+      {loading && (
+        <div>
+            <CircleSpinnerOverlay
+            　　loading={loading} 
+            overlayColor="rgba(0,153,255,0.2)"
+            />
+        </div>
+      )}
+        <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
         {tokens.map((token: Token, index) => (
           <Grid item xs={2} sm={4} md={4} key={index}>
             <Item>
@@ -200,61 +281,68 @@ const TokenGrid = ({ data }: TokenData) => {
               <p>{token.metadata.description}</p>
               <p>Owner: {token.contractToken.owner.id}</p>
               <p>Collection: {token.contractToken.collection.collectionName}</p>
-              {token.contractToken.owner.id.localeCompare(account) && !token.contractToken.approved && (
+              {token.contractToken.owner.id === account.toLowerCase() && !token.contractToken.approved && (
                 <div className="operations">
                   <button onClick={() => approve(token.contractToken.tokenId, token.contractToken.collection.id, token.contractToken.collection.collectionName)}>Approve</button>
                 </div>
               )}
-              {token.contractToken.owner.id.localeCompare(account) && token.contractToken.approved && (
+              {token.contractToken.owner.id === account.toLowerCase() && token.contractToken.approved && !token.contractToken.listing && (
                 <div className="operations">
-                  <button disabled={checkIfSale(token.contractToken.id)} onClick={()=>allowForSale(token.contractToken.id)}>Sell</button>
-                  {checkIfSale(token.contractToken.id) && (
-                    <div>
-                      <input name="salePrice" />
-                      <button>Set</button>
-                      <button>Cancel</button>
-                    </div>
-                  )}
+                  <button onClick={()=>sell(token.contractToken.id, token.contractToken.tokenId, token.contractToken.collection.id)}>Sell</button>
+                  <input name={`salePrice-${token.contractToken.id}`} type="text" onChange={priceInput} value={saleData.get('salePrice-'+token.contractToken.id)}/>
                 </div>
               )}
-              {token.contractToken.owner.id.localeCompare(account) && token.contractToken.listing && (
+              {token.contractToken.owner.id === account.toLowerCase() && token.contractToken.listing && (
                 <div className="operations">
                   <button onClick={async () => {await withdrawForSale(token.contractToken.tokenId, token.contractToken.collection.id);}}>Cancel sale</button>
-                  <div>{token.contractToken.listing.price}</div>
+                  <h2>{token.contractToken.listing.price}</h2>
                 </div>
               )}
-              {!token.contractToken.owner.id.localeCompare(account) && token.contractToken.listing && (
+              {!(token.contractToken.owner.id === account.toLowerCase()) && token.contractToken.listing && (
                 <div className="operations">
                   <button onClick={async () => {await buyAnItem(token.contractToken.tokenId, token.contractToken.collection.id, token.contractToken.listing.price);}}>Buy</button>
-                  <div>{token.contractToken.listing.price}</div>
+                  <h2>{token.contractToken.listing.price}</h2>
                 </div>
                 
               )}
-              {!token.contractToken.owner.id.localeCompare(account) && !token.contractToken.listing && (
-                <button onClick={async () => {await buyAnItem(token.contractToken.tokenId, token.contractToken.collection.id, token.contractToken.listing.price);}}>Make an offer</button>
-
+              {!(token.contractToken.owner.id === account.toLowerCase()) && !checkIfOfferExists(token.contractToken.offers) && (
+                <div className="operations">
+                  <button onClick={()=>makeAnOffer(token.contractToken.id, token.contractToken.tokenId, token.contractToken.collection.id)}>Make an offer</button>
+                  <input name={`offerPrice-${token.contractToken.id}`} type="text" onChange={offerInput} value={offerData.get('offerPrice-'+token.contractToken.id)}/>
+                </div>
               )}
-              {token.contractToken.owner.id.localeCompare(account) && token.contractToken.offers.length > 0 && (
+              {token.contractToken.owner.id === account.toLowerCase() && token.contractToken.offers.length > 0 && (
+                <div>
+                  <b>OFFERS:</b>
                 <div className="operations">
                 {token.contractToken.offers.map((offer: Offer, index) => (
-                  <li>User: {offer.offerer} Price: {offer.price} 
+                  offer.active && (
+                  <div>User: {offer.offerer.id} Price: {offer.price} 
                     <button onClick={async () => {await approveAnOffer(token.contractToken.tokenId, token.contractToken.collection.id, offer.offerer);}}>Accept</button>
                     <button onClick={async () => {await rejectAnOffer(token.contractToken.tokenId, token.contractToken.collection.id, offer.offerer);}}>Reject</button>
-                  </li>  
-                ))}
-                </div>
-              )}
-              {!token.contractToken.owner.id.localeCompare(account) && token.contractToken.offers.length > 0 && (
-                <div className="operations">
-                {token.contractToken.offers.map((offer: Offer, index) => (
-                  checkIfOfferer(offer) && (
-                    <li>Price: {offer.price} 
-                      <button onClick={async () => {await withdrawAnOffer(token.contractToken.tokenId, token.contractToken.collection.id);}}>Withdraw the offer</button>
-                    </li>  
+                  </div> 
                   )
                 ))}
-                </div>
+                </div></div>
               )}
+              {!(token.contractToken.owner.id === account.toLowerCase()) && token.contractToken.offers.length > 0 && (
+                <div className="operations">
+                <div>
+                <b>YOUR OFFER:</b>
+                {token.contractToken.offers.map((offer: Offer, index) => (
+                  checkIfOfferer(offer) && (
+                    <div>Active: {offer.active ? "Yes" : "No"} Price: {offer.price} 
+                      {offer.active && (
+                      <button onClick={async () => {await withdrawAnOffer(token.contractToken.tokenId, token.contractToken.collection.id);}}>Withdraw the offer</button>
+                      )}
+                    </div>  
+                  )
+                ))}
+                </div></div>
+              )}
+              <div className="error">
+                  {errorData.get(token.contractToken.id)}
+              </div>
               </Item>
           </Grid>
         ))}
@@ -267,6 +355,7 @@ const TokenGrid = ({ data }: TokenData) => {
         }
         .operations button {
           padding: 10px;
+          margin: 10px;
         }
       `}</style>
     </Box>
