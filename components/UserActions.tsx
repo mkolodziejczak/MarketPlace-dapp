@@ -32,10 +32,26 @@ const UserActions = () => {
     const getBalance = async() => {
       const marketplaceBalance = await marketplaceContract.userToFunds(account);
       setBalance( marketplaceBalance.toNumber());
-      console.log(marketplaceBalance);
     };
     if( isConnected ) {
       getBalance();
+
+      const filterFundsWithdrawal = marketplaceContract.filters.WithdrawalOfFunds(
+        account, null
+      );
+
+      marketplaceContract.on(filterFundsWithdrawal, (user, funds) => {
+        getBalance();
+      });
+
+      const filterFundsDeposit = marketplaceContract.filters.DepositOfFunds(
+        account, null
+      );
+      
+      marketplaceContract.on(filterFundsDeposit, (user, funds) => {
+        getBalance();
+      });
+
     }
     
   },[account]);
