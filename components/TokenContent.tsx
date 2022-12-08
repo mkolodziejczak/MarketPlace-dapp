@@ -38,9 +38,12 @@ const TokenBalance = ({token}: TokenData) => {
   const [owner, setOwner] = useState<string>(token.contractToken.owner.id);
   const [isUserOfferPresent, setIsUserOfferPresent] = useState<boolean>(false);
   const [userOffer, setUserOffer] = useState<Offer | undefined>(findUserOffer(token.contractToken.offers));
-  
+  const [changeInOffers, setChangeInOffers] = useState<number>(0);
+  const [offers, setOffers] = useState<Offer[]>(token.contractToken.offers);
 
   useEffect(() => {
+
+    setChangeInOffers(changeInOffers+1);
 
     if (isListingPresent) {
       setListingPrice(token.contractToken.listing.price);
@@ -65,7 +68,7 @@ const TokenBalance = ({token}: TokenData) => {
       
       marketplaceContract.on(filterListedForSale, (tokenId, collectionId, price) => {
         setIsListingPresent(true);
-        setListingPrice(price);
+        setListingPrice(price.toString());
       });
 
       const filterWithdrawnFromSale = marketplaceContract.filters.ItemWithdrawnFromSale(
@@ -82,6 +85,8 @@ const TokenBalance = ({token}: TokenData) => {
       
       marketplaceContract.on(filterTradeConfirmed, (tokenId, collectionId, fromUser, toUser: string, price) => {
         setOwner(toUser.toLowerCase());
+        setIsListingPresent(false);
+        setApproved(false);
       });
 
       const filterOfferMade = marketplaceContract.filters.OfferMade(
@@ -89,8 +94,8 @@ const TokenBalance = ({token}: TokenData) => {
       );
       
       marketplaceContract.on(filterOfferMade, (tokenId, collectionId, offerer, price) => {
+        setUserOffer({price: price.toString(), offerer: { id: offerer}, active: true});
         setIsUserOfferPresent(true);
-        setUserOffer({price: price, offerer: { id: offerer}, active: true});
       });
 
       const filterOfferWithdrawn = marketplaceContract.filters.OfferWithdrawn(
@@ -102,31 +107,52 @@ const TokenBalance = ({token}: TokenData) => {
       });
 
       const filterOfferRejected = marketplaceContract.filters.OfferRejected(
-        token.contractToken.tokenId, token.contractToken.collection.id, account
+        token.contractToken.tokenId, token.contractToken.collection.id, null
       );
       
       marketplaceContract.on(filterOfferRejected, (tokenId, collectionId, offerer) => {
-        setUserOffer({price: userOffer.price, offerer: {id: userOffer.offerer.id}, active:false});
+        deactivateParticularOffer(offerer);
+        console.log("EJECTION");
+        console.log(offers);
+        setChangeInOffers(changeInOffers+1);
       });
     }
   },[account])
 
-  function checkIfOfferer( offer: Offer ) : boolean {
+  function checkIfOfferer ( offer: Offer ) : boolean {
     if (offer.offerer.id === account.toLowerCase()) {
       return true;
     }
     return false;
   }
 
-  function findUserOffer( offers: Offer[] ) : Offer {
+  function findUserOffer (offers: Offer[]) : Offer {
     let matched = null;
     offers.map(( offer, index) => {
       if (checkIfOfferer(offer)) {
         matched = offer;
+        return;
       }
     });
     return matched;
   }
+
+  function deactivateParticularOffer (buyer: string) {
+    let matched = null;
+    let offs = [...offers];
+
+    offers.map(( offer, index) => {
+      if (offer.offerer.id === buyer.toLowerCase()) {
+        matched = index;
+        return;
+      }
+    });
+    if (matched != null ) {
+      offs[matched] = {price: offers[matched].price, offerer: {id: offers[matched].offerer.id}, active: false};
+    }
+    setOffers(offs);
+  }
+
 
   const approve = async (tokenId, collectionAddress, collectionName) => {
     setLoading(true);
@@ -179,7 +205,6 @@ const TokenBalance = ({token}: TokenData) => {
     });
     await tx.wait();
     setLoading(false);
-    window.location.reload();
   }
 
   const withdrawForSale = async (tokenId, collectionAddress) => {
@@ -302,11 +327,12 @@ const TokenBalance = ({token}: TokenData) => {
               </div>
           )
         )}
-        {owner === account.toLowerCase() && token.contractToken.offers.length > 0 && (
+        {owner === account.toLowerCase() && offers.length > 0 && (
+          
         <div>
             <b>OFFERS:</b>
         <div className="operations">
-        {token.contractToken.offers.map((offer: Offer, index) => (
+        {changeInOffers && offers.map((offer: Offer, index) => (
             offer.active && (
             <div>User: {offer.offerer.id} Price: {offer.price} 
             <button onClick={async () => {await approveAnOffer(token.contractToken.tokenId, token.contractToken.collection.id, offer.offerer);}}>Accept</button>
@@ -325,7 +351,7 @@ const TokenBalance = ({token}: TokenData) => {
                 <h2>{token.contractToken.listing.price}</h2>
             </div>
         )}
-        {!(owner === account.toLowerCase()) && (!isUserOfferPresent || !userOffer.active) && (
+        {!(owner === account.toLowerCase()) && (!isUserOfferPresent || (userOffer && !userOffer.active)) && (
         <div className="operations">
             <button onClick={changeOfferStatus}>Make an offer</button>
             { openOffer && (

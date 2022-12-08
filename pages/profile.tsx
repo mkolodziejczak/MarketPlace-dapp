@@ -13,7 +13,7 @@ function Profile() {
   
   const isConnected = typeof account === "string" && !!library;
   const [result, setResult] = useState<JSX.Element[]>([]);
-  const [loading, setLoading] = useState<Boolean>();
+  const [loading, setLoading] = useState<boolean>();
 
   useEffect(() => {
     setLoading(true);
@@ -26,12 +26,19 @@ function Profile() {
             userAddress: account.toLowerCase(),
           },
         })
-        .then((data) => {setResult(data.data.user.tokens); console.log(data.data.user.tokens); setLoading(false);})
+        .then((data) => setVariables(data.data))
         .catch((err) => {
           console.log('Error fetching data: ', err)
         })
     }
   },[account]);
+
+  const setVariables = (data:Object) => {
+    if( data.user ) {
+      setResult(data.user.tokens);
+    }
+    setLoading(false)
+  }
 
   return (
     <div>

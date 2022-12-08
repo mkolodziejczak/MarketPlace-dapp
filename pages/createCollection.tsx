@@ -3,6 +3,7 @@ import { useWeb3React } from "@web3-react/core";
 import { useEffect, useState } from "react";
 import useMarketplaceContract from "../hooks/useMarketplaceContract";
 import { MARKETPLACE_ADDRESS } from "../constants/index";
+import { CircleSpinnerOverlay, FerrisWheelSpinner } from 'react-spinner-overlay'
 
 
 const createCollection = () => {
@@ -11,6 +12,7 @@ const createCollection = () => {
   const [name, setName] = useState<string | undefined>();
   const [symbol, setSymbol] = useState<string | undefined>();
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
   },[]);
@@ -35,8 +37,11 @@ const createCollection = () => {
       setError("Symbol cannot be empty");
       return
     }
+
+    setLoading(true);
     const tx = await marketplaceContract.createNewCollection( name, symbol);
     await tx.wait();
+    setLoading(false);
 
     resetForm();
   }
@@ -49,8 +54,16 @@ const createCollection = () => {
 
   return (
     <div className="results-form">
+    {loading && (
+        <div>
+            <CircleSpinnerOverlay
+            　　loading={loading} 
+            overlayColor="rgba(0,153,255,0.2)"
+            />
+        </div>
+    )}
     <div className="page-title">
-      Mint NFT
+      Create Collection
     </div>
     <form>
       <label>

@@ -7,6 +7,7 @@ import { gql } from '@apollo/client';
 import { USER_COLLECTIONS_QUERY } from "../constants/queries";
 import useNftStorage from "../hooks/useNftStorage";
 import { MARKETPLACE_ADDRESS } from "../constants/index"
+import { CircleSpinnerOverlay, FerrisWheelSpinner } from 'react-spinner-overlay'
 
 type Collection = {
     collectionName: string;
@@ -23,25 +24,31 @@ const MintItem = () => {
   const [file, setFile] = useState();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    useApolloClient()
-      .query({
-        query: gql(USER_COLLECTIONS_QUERY),
-        variables: {
-            userAddress: account,
-        },
-      })
-      .then((data) => setUpCollections(data.data.collections))
-      .catch((err) => {
-        console.log('Error fetching data: ', err)
-      })
-  },[]);
+    if (account) {
+        useApolloClient()
+        .query({
+            query: gql(USER_COLLECTIONS_QUERY),
+            variables: {
+                userAddress: account.toLowerCase(),
+            },
+        })
+        .then((data) => setUpCollections(data.data.user))
+        .catch((err) => {
+            console.log('Error fetching data: ', err)
+        })
+    }
+  },[account]);
 
-  function setUpCollections (collections : Collection[]) {
-    setCollections( collections );
-    if (collections.length > 0) {
-        setCollection(collections[0].collectionAddress);
+  function setUpCollections (userCollections : { collections: Collection[] }) {
+    if (userCollections) {
+        console.log(userCollections.collections);
+        setCollections( userCollections.collections );
+        if (userCollections.collections.length > 0) {
+            setCollection(userCollections.collections[0].collectionAddress);
+        }
     }
   }
 
@@ -76,7 +83,7 @@ const MintItem = () => {
         setError("Collection cannot be empty");
         return
     }
-
+    setLoading(true);
     const uri = await useNftStorage(file, name, description);
 
     if( uri === undefined || uri.url == '' ) {
@@ -85,7 +92,7 @@ const MintItem = () => {
     }
     const tx = await marketplaceContract.createNewToken( collection, uri.url)
     await tx.wait();
-
+    setLoading(false);
     resetForm();
   }
 
@@ -99,6 +106,14 @@ const MintItem = () => {
 
   return (
     <div className="results-form">
+    {loading && (
+        <div>
+            <CircleSpinnerOverlay
+            　　loading={loading} 
+            overlayColor="rgba(0,153,255,0.2)"
+            />
+        </div>
+    )}
     <div className="page-title">
       Mint NFT
     </div>
@@ -115,7 +130,7 @@ const MintItem = () => {
         Collection:
         <select value={collection} onChange={collectionInput}>
             {collections.map((d) => (
-                <option key="{d.collectionAddress}" value="{d.collectionAddress}">{d.collectionName}</option>
+                <option key="{d.collectionAddress}" value={d.collectionAddress}>{d.collectionName}</option>
             ))}
         </select>
       </label>

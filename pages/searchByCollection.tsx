@@ -42,7 +42,7 @@ function SearchByCollection() {
         )}
       {isConnected && !loading ? (
         <section>
-          By User
+          By Collection
           <TokenGrid data={result} />
         </section>
         ) : (

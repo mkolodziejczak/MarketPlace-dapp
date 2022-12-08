@@ -6,7 +6,7 @@ Interacts with Goerli contract with address:
 0x7D584Ef99988A1dbf6083d53970f8Be0e6bd7A21
 
 Supported by The Graph:
-https://api.studio.thegraph.com/query/37975/marketplace-graph/1.6
+https://api.studio.thegraph.com/query/37975/marketplace-graph/1.7
 
 Source Code for the graph located in separate repository:
 https://github.com/mkolodziejczak/MarketPlace-services

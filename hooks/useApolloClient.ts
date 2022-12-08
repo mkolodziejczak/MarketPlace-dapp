@@ -1,6 +1,6 @@
 import { ApolloClient, InMemoryCache } from '@apollo/client'
 
-const APIURL = 'https://api.studio.thegraph.com/query/37975/marketplace-graph/1.6'
+const APIURL = 'https://api.studio.thegraph.com/query/37975/marketplace-graph/1.7'
 
 
 export default function useLibraryContract() {

@@ -61,12 +61,11 @@ export const USER_TOKENS_QUERY = `
 
 export const USER_COLLECTIONS_QUERY = `
   query ($userAddress: String) {
-    collections(creator: $userAddress) {
-        id
-        collectionAddress
-        collectionName
-        creator {
+    user(id: $userAddress) {
+        collections {
             id
+            collectionAddress
+            collectionName
         }
     }
   }  

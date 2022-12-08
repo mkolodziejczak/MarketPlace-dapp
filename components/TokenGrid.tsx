@@ -35,14 +35,18 @@ const TokenGrid = ({ data }: TokenData) => {
   
   async function processToken(token: ContractToken) {
     let metadata: Metadata = await getMetadataFromUrl(token.uri);
-    let imageUrl = metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/");
+
+    let splitFilePath = metadata.image.split("/");
+    let encodedFileName = encodeURIComponent(splitFilePath[3]);
+    splitFilePath[3] = encodedFileName;
+    let imageUrl = splitFilePath.join("/").replace("ipfs://", "https://ipfs.io/ipfs/");
+
     return new Token(metadata, token, imageUrl);
   }
 
   useEffect(() => {
 
     const processTokens = async(data) => {
-      console.log(data);
       let tokensArray = [];
       for (const token of data) {
         if( token.uri != "" ) {
@@ -52,7 +56,6 @@ const TokenGrid = ({ data }: TokenData) => {
       }
       setTokens(tokensArray);
     };
-    console.log(data);
     processTokens(data);
   },[]);
 

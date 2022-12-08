@@ -108,6 +108,7 @@ const UserActions = () => {
     }
 
     const tx = await marketplaceContract.withdrawFunds(amount);
+    await tx.wait();
     setLoading(false);
   }
 
