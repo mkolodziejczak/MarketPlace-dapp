@@ -140,7 +140,7 @@ const MintItem = () => {
       </label>
     </form>
     <div className="button-wrapper">
-    <button onClick={submitStateResults}>Submit Results</button>
+    <button onClick={submitStateResults}>Submit</button>
     </div>
     <div className="error">
         {error}
